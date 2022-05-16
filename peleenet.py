@@ -54,17 +54,12 @@ class _DenseLayer(nn.Module):
             inter_channel = int(num_input_features / 8) * 4
             print('adjust inter_channel to ', inter_channel)
 
-        self.branch1a = conv_bn_relu(
-            num_input_features, inter_channel, kernel_size=1)
-        self.branch1b = conv_bn_relu(
-            inter_channel, growth_rate, kernel_size=3, padding=1)
+        self.branch1a = conv_bn_relu(num_input_features, inter_channel, kernel_size=1)
+        self.branch1b = conv_bn_relu(inter_channel, growth_rate, kernel_size=3, padding=1)
 
-        self.branch2a = conv_bn_relu(
-            num_input_features, inter_channel, kernel_size=1)
-        self.branch2b = conv_bn_relu(
-            inter_channel, growth_rate, kernel_size=3, padding=1)
-        self.branch2c = conv_bn_relu(
-            growth_rate, growth_rate, kernel_size=3, padding=1)
+        self.branch2a = conv_bn_relu(num_input_features, inter_channel, kernel_size=1)
+        self.branch2b = conv_bn_relu(inter_channel, growth_rate, kernel_size=3, padding=1)
+        self.branch2c = conv_bn_relu(growth_rate, growth_rate, kernel_size=3, padding=1)
 
     def forward(self, x):
         out1 = self.branch1a(x)
@@ -83,10 +78,8 @@ class _DenseBlock(nn.Sequential):
     def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate):
         super(_DenseBlock, self).__init__()
         for i in range(num_layers):
-            layer = _DenseLayer(num_input_features + i *
-                                growth_rate, growth_rate, bn_size, drop_rate)
+            layer = _DenseLayer(num_input_features + i * growth_rate, growth_rate, bn_size, drop_rate)
             self.add_module('denselayer%d' % (i + 1), layer)
-
 
 class _StemBlock(nn.Module):
 
@@ -95,19 +88,14 @@ class _StemBlock(nn.Module):
 
         num_stem_features = int(num_init_features / 2)
 
-        self.stem1 = conv_bn_relu(
-            num_input_channels, num_init_features, kernel_size=3, stride=2, padding=1)
-        self.stem2a = conv_bn_relu(
-            num_init_features, num_stem_features, kernel_size=1, stride=1, padding=0)
-        self.stem2b = conv_bn_relu(
-            num_stem_features, num_init_features, kernel_size=3, stride=2, padding=1)
-        self.stem3 = conv_bn_relu(
-            2 * num_init_features, num_init_features, kernel_size=1, stride=1, padding=0)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)
+        self.stem1  = conv_bn_relu(num_input_channels, num_init_features, kernel_size=3, stride=2, padding=1)
+        self.stem2a = conv_bn_relu(num_init_features, num_stem_features, kernel_size=1, stride=1, padding=0)
+        self.stem2b = conv_bn_relu(num_stem_features, num_init_features, kernel_size=3, stride=2, padding=1)
+        self.stem3  = conv_bn_relu(2 * num_init_features, num_init_features, kernel_size=1, stride=1, padding=0)
+        self.pool   = nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)
 
     def forward(self, x):
         out = self.stem1(x)
-
         branch2 = self.stem2a(out)
         branch2 = self.stem2b(branch2)
         branch1 = self.pool(out)
@@ -167,15 +155,13 @@ class PeleeNet(nn.Module):
 
         if type(cfg.growth_rate) is list:
             growth_rates = cfg.growth_rate
-            assert len(
-                growth_rates) == 4, 'The growth rate must be the list and the size must be 4'
+            assert len(growth_rates) == 4, 'The growth rate must be the list and the size must be 4'
         else:
             growth_rates = [cfg.growth_rate] * 4
 
         if type(cfg.bottleneck_width) is list:
             bottleneck_widths = cfg.bottleneck_width
-            assert len(
-                bottleneck_widths) == 4, 'The bottleneck width must be the list and the size must be 4'
+            assert len(bottleneck_widths) == 4, 'The bottleneck width must be the list and the size must be 4'
         else:
             bottleneck_widths = [cfg.bottleneck_width] * 4
 
@@ -187,12 +173,10 @@ class PeleeNet(nn.Module):
             self.features.add_module('denseblock%d' % (i + 1), block)
             num_features = num_features + num_layers * growth_rates[i]
 
-            self.features.add_module('transition%d' % (i + 1), conv_bn_relu(
-                num_features, num_features, kernel_size=1, stride=1, padding=0))
+            self.features.add_module('transition%d' % (i + 1), conv_bn_relu(num_features, num_features, kernel_size=1, stride=1, padding=0))
 
             if i != len(cfg.block_config) - 1:
-                self.features.add_module('transition%d_pool' % (
-                    i + 1), nn.AvgPool2d(kernel_size=2, stride=2, ceil_mode=True))
+                self.features.add_module('transition%d_pool' % (i + 1), nn.AvgPool2d(kernel_size=2, stride=2, ceil_mode=True))
                 num_features = num_features
 
         extras = add_extras(704, batch_norm=True)
@@ -302,18 +286,14 @@ def add_extras(i, batch_norm=False):
     for k, v in enumerate(channels):
         if k % 2 == 0:
             if batch_norm:
-                layers += [conv_bn_relu(in_channels, v,
-                                        kernel_size=1, padding=padding[k])]
+                layers += [conv_bn_relu(in_channels, v, kernel_size=1, padding=padding[k])]
             else:
-                layers += [conv_relu(in_channels, v,
-                                     kernel_size=1, padding=padding[k])]
+                layers += [conv_relu(in_channels, v, kernel_size=1, padding=padding[k])]
         else:
             if batch_norm:
-                layers += [conv_bn_relu(in_channels, v,
-                                        kernel_size=3, stride=stride[k], padding=padding[k])]
+                layers += [conv_bn_relu(in_channels, v, kernel_size=3, stride=stride[k], padding=padding[k])]
             else:
-                layers += [conv_relu(in_channels, v,
-                                     kernel_size=3, stride=stride[k], padding=padding[k])]
+                layers += [conv_relu(in_channels, v, kernel_size=3, stride=stride[k], padding=padding[k])]
         in_channels = v
 
     return layers
